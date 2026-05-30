@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLIP File Generator — DS Horowpothana</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0f2744;--navy2:#1a3a5c;--navy3:#234d79;
+  --accent:#e8a020;--accent2:#f0b84a;
+  --green:#1a7a4a;--green2:#22a65e;
+  --red:#c0392b;--red2:#e74c3c;
+  --gray1:#f4f6f9;--gray2:#e8ecf2;--gray3:#c8d0dc;--gray4:#8898aa;--gray5:#4a5568;
+  --text:#1e2d40;--white:#ffffff;
+  --shadow:0 2px 12px rgba(15,39,68,.10);--shadow2:0 8px 32px rgba(15,39,68,.16);
+  --radius:8px;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:var(--sans);background:var(--gray1);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gray3);border-radius:3px}
+
+/* HEADER */
+.header{background:var(--navy);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--accent);gap:12px}
+.hdr-left{display:flex;align-items:center;gap:14px;min-width:0}
+.hdr-logo{width:36px;height:36px;flex-shrink:0;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:.85rem;color:var(--navy)}
+.hdr-title{font-size:1rem;font-weight:700}
+.hdr-sub{font-size:.7rem;color:rgba(255,255,255,.5);font-family:var(--mono);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+
+/* SYNC BADGE */
+.sync-badge{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;font-size:.72rem;font-weight:600;font-family:var(--mono);border:1.5px solid rgba(255,255,255,.15);white-space:nowrap;cursor:default}
+.sync-badge .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-none{color:rgba(255,255,255,.4)}
+.sb-none .dot{background:rgba(255,255,255,.25)}
+.sb-syncing{color:#fde68a}
+.sb-syncing .dot{background:#fde68a;animation:pulse 1s infinite}
+.sb-ok{color:#6ee7b7}
+.sb-ok .dot{background:#6ee7b7}
+.sb-err{color:#fca5a5;cursor:pointer}
+.sb-err .dot{background:#fca5a5}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* SETUP BANNER */
+.setup-banner{background:#fff8ec;border:1.5px solid var(--accent);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:.83rem}
+.setup-banner strong{color:var(--navy2)}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:290px 1fr;gap:20px;padding:20px 24px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+/* PANEL */
+.panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.panel-head{background:var(--navy);color:#fff;padding:12px 16px;font-weight:600;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+
+/* ORIG */
+.panel-body{padding:16px}
+.orig-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray2);font-size:.82rem}
+.orig-row:last-child{border-bottom:none}
+.orig-lbl{color:var(--gray4);font-family:var(--mono);font-size:.74rem}
+.orig-val{font-weight:600;color:var(--navy2);font-family:var(--mono);font-size:.79rem}
+.ac-label{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray5);margin-top:12px;margin-bottom:5px}
+.ac-btns{display:flex;gap:8px}
+.ac-btn{flex:1;padding:9px 6px;border:2px solid var(--gray2);border-radius:6px;background:var(--white);cursor:pointer;font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--gray5);transition:all .18s;text-align:center}
+.ac-btn:hover{border-color:var(--navy2)}
+.ac-btn.on{border-color:var(--accent);background:#fff8ec;color:var(--navy);box-shadow:0 0 0 3px rgba(232,160,32,.15)}
+
+/* BATCH */
+.batch-item{border:2px solid var(--gray2);border-radius:6px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .18s;position:relative}
+.batch-item:hover{border-color:var(--navy3);background:var(--gray1)}
+.batch-item.active{border-color:var(--navy2);background:#f0f5fc}
+.batch-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);border-radius:4px 0 0 4px}
+.batch-name{font-weight:700;font-size:.87rem;color:var(--navy);margin-bottom:3px}
+.batch-meta{font-size:.73rem;color:var(--gray4);font-family:var(--mono)}
+.batch-del{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--gray3);font-size:.88rem;padding:2px 5px;border-radius:4px;transition:all .15s}
+.batch-del:hover{background:var(--red2);color:#fff}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;font-family:var(--sans);font-size:.82rem;font-weight:600;transition:all .18s;white-space:nowrap}
+.btn-primary{background:var(--navy2);color:#fff}.btn-primary:hover{background:var(--navy)}
+.btn-accent{background:var(--accent);color:var(--navy)}.btn-accent:hover{background:var(--accent2)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:var(--green2)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:var(--red2)}
+.btn-ghost{background:transparent;border:1.5px solid var(--gray3);color:var(--gray5)}.btn-ghost:hover{border-color:var(--navy2);color:var(--navy2);background:var(--gray1)}
+.btn-sm{padding:4px 9px;font-size:.76rem}
+.btn-xs{padding:3px 7px;font-size:.72rem}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.74rem;font-weight:700;color:var(--gray5);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.fg .hint{font-size:.69rem;color:var(--gray4);margin-top:3px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:8px 10px;border:1.5px solid var(--gray2);border-radius:5px;font-family:var(--sans);font-size:.85rem;color:var(--text);background:var(--white);transition:border .18s}
+input:focus,select:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(26,58,92,.1)}
+.mono{font-family:var(--mono)!important;font-size:.82rem!important}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.span2{grid-column:1/-1}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{background:var(--gray1);padding:9px 10px;text-align:left;font-weight:700;color:var(--gray5);text-transform:uppercase;font-size:.69rem;letter-spacing:.06em;border-bottom:2px solid var(--gray2);white-space:nowrap}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--gray2);vertical-align:middle}
+tbody tr:hover td{background:#fafbfc}
+.tbl-empty{text-align:center;padding:40px;color:var(--gray4)}
+.tbl-empty .ico{font-size:2rem;margin-bottom:8px}
+.tbl-total td{background:#f0f7ff;font-weight:700;border-top:2px solid var(--gray2)}
+
+/* GENERATE BAR */
+.gen-bar{background:var(--navy);color:#fff;border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap}
+.gen-bar label{color:rgba(255,255,255,.6);font-size:.71rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+.gen-bar input{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;padding:8px 10px;border-radius:5px;font-family:var(--mono);width:140px}
+.gen-bar input:focus{border-color:var(--accent);outline:none;background:rgba(255,255,255,.15)}
+.gen-bar input::placeholder{color:rgba(255,255,255,.3)}
+.gen-info{font-size:.78rem;color:rgba(255,255,255,.5);font-family:var(--mono);flex:1;min-width:160px}
+.gen-total{font-size:1rem;font-weight:700;color:var(--accent2)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(5,15,30,.55);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:10px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow2)}
+.modal-sm{max-width:440px}.modal-md{max-width:620px}.modal-lg{max-width:780px}
+.mh{padding:18px 20px;border-bottom:1px solid var(--gray2);display:flex;align-items:center;justify-content:space-between}
+.mh h2{font-size:1rem;font-weight:700;color:var(--navy)}
+.mh-close{background:none;border:none;cursor:pointer;color:var(--gray4);font-size:1.1rem;padding:4px 6px;border-radius:4px;transition:all .15s}
+.mh-close:hover{background:var(--gray2);color:var(--text)}
+.mb{padding:20px}
+.mf{padding:14px 20px;border-top:1px solid var(--gray2);display:flex;justify-content:flex-end;gap:10px;background:var(--gray1);border-radius:0 0 10px 10px}
+
+/* IMPORT SLIPS */
+.isl-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1.5px solid var(--gray2);border-radius:6px;margin-bottom:7px;transition:all .15s}
+.isl-item:hover{border-color:var(--navy3);background:var(--gray1)}
+.isl-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--navy2)}
+.isl-name{font-weight:600;font-size:.83rem;color:var(--navy)}
+.isl-meta{font-size:.71rem;color:var(--gray4);font-family:var(--mono);margin-top:1px}
+.isl-amt{font-weight:700;font-size:.83rem;color:var(--green);margin-left:auto;white-space:nowrap}
+
+/* SETTINGS */
+.stg-section{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray4);margin-bottom:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--gray2)}
+.stg-section:first-child{border-top:none;margin-top:0;padding-top:0}
+.info-box{background:var(--gray1);border:1.5px solid var(--gray2);border-radius:6px;padding:14px;font-size:.79rem;color:var(--gray5);line-height:1.75}
+.info-box ol{padding-left:16px}
+.info-box code{font-family:var(--mono);background:var(--gray2);padding:1px 5px;border-radius:3px;font-size:.74rem;color:var(--navy2)}
+.info-box strong{color:var(--navy)}
+.conn-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;font-size:.79rem;margin-top:8px}
+.conn-ok{background:#dcfce7;color:var(--green);border:1px solid #bbf7d0}
+.conn-err{background:#fee2e2;color:var(--red);border:1px solid #fecaca}
+.conn-wait{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:7px;font-weight:600;font-size:.82rem;box-shadow:var(--shadow2);z-index:9999;opacity:0;transform:translateY(12px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{background:var(--navy);color:var(--accent2);border-left:4px solid var(--accent)}
+.toast.err{background:#fff0ee;color:var(--red);border-left:4px solid var(--red)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="hdr-left">
+    <div class="hdr-logo">SLP</div>
+    <div>
+      <div class="hdr-title">SLIP File Generator</div>
+      <div class="hdr-sub">Divisional Secretariat Horowpothana — Accounts Branch</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="sync-badge sb-none" id="syncBadge" title="Sync status">
+      <div class="dot"></div><span id="syncText">Not configured</span>
+    </div>
+    <button class="btn btn-ghost" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)" onclick="openModal('settingsModal')">⚙ Settings</button>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT -->
+  <aside>
+    <div class="panel">
+      <div class="panel-head">🏦 Originating Details</div>
+      <div class="panel-body">
+        <div class="orig-row"><span class="orig-lbl">Bank No.</span><span class="orig-val">7010</span></div>
+        <div class="orig-row"><span class="orig-lbl">Branch No.</span><span class="orig-val">217</span></div>
+        <div class="orig-row"><span class="orig-lbl">A/C Name</span><span class="orig-val">DIV SEC HOROWPOTHANA</span></div>
+        <div class="ac-label">Select Account No.</div>
+        <div class="ac-btns">
+          <button class="ac-btn on" id="acBtn1" onclick="selectAC('7042198')">7042198</button>
+          <button class="ac-btn" id="acBtn2" onclick="selectAC('5620391')">5620391</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        📁 Payment Batches
+        <button class="btn btn-accent btn-sm" onclick="openModal('newBatchModal')">+ New Batch</button>
+      </div>
+      <div class="panel-body" id="batchList">
+        <div style="text-align:center;padding:24px 0;color:var(--gray4)">
+          <div style="font-size:2rem;margin-bottom:8px">📂</div>
+          <div style="font-size:.8rem">No batches yet.<br>Create one to get started.</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <div id="setupBanner" style="display:none" class="setup-banner">
+      <span style="font-size:1.2rem">⚠️</span>
+      <div><strong>Google Sheets not connected.</strong> Your data is saved locally only. <a href="#" onclick="openModal('settingsModal');return false" style="color:var(--navy2);font-weight:700">Click here to connect →</a></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span id="batchTitle">📋 Slips — No Batch Selected</span>
+        <div id="slipBtns" style="display:none;gap:8px">
+          <button class="btn btn-ghost btn-sm" style="border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.8)" onclick="openImportModal()">⬇ Copy from Batch</button>
+          <button class="btn btn-accent btn-sm" onclick="openAddSlip()">+ Add Slip</button>
+        </div>
+      </div>
+      <div id="slipArea">
+        <div class="tbl-empty"><div class="ico">📄</div><div>Select or create a batch to manage slips.</div></div>
+      </div>
+    </div>
+
+    <div class="gen-bar" id="genBar" style="display:none">
+      <div>
+        <label>Output File Name (max 8 chars)</label>
+        <input type="text" id="outFileName" maxlength="8" placeholder="CYCLN001" class="mono" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      </div>
+      <div class="gen-info" id="genInfo">0 slips · LKR 0.00</div>
+      <button class="btn btn-success" style="font-size:.9rem;padding:10px 20px" onclick="generateFile()">⬇ Download SLIP File (.txt)</button>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+
+<!-- New Batch -->
+<div class="overlay" id="newBatchModal">
+  <div class="modal modal-sm">
+    <div class="mh"><h2>Create New Batch</h2><button class="mh-close" onclick="closeModal('newBatchModal')">✕</button></div>
+    <div class="mb">
+      <div class="fg"><label>Batch Name</label><input type="text" id="nb_name" placeholder="e.g. Cyclone Business Compensation"></div>
+      <div class="fg"><label>Note <span style="font-weight:400;text-transform:none">(optional)</span></label><input type="text" id="nb_note" placeholder="e.g. Payment date: 30/05/2026"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('newBatchModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createBatch()">Create Batch</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Slip -->
+<div class="overlay" id="slipModal">
+  <div class="modal modal-lg">
+    <div class="mh"><h2 id="slipModalTitle">Add Slip</h2><button class="mh-close" onclick="closeModal('slipModal')">✕</button></div>
+    <div class="mb">
+      <div class="form-grid">
+        <div class="fg">
+          <label>Destination Bank No. (4 digits)</label>
+          <input type="text" id="s_dbank" maxlength="4" placeholder="e.g. 7010" class="mono" oninput="this.value=this.value.replace(/\D/g,'');updatePreview()">
+        </div>
+        <div class="fg">
+          <label>Destination Branch No. (3 digits)</label>
+          <input type="text" id="s_dbranch" maxlength="3" placeholder="e.g. 217" class="mono" oninput="this.value=this.value.replace(/\D/g,'');updatePreview()">
+        </div>
+        <div class="fg">
+          <label>Destination A/C No. (max 12 digits)</label>
+          <input type="text" id="s_dac" maxlength="12" placeholder="e.g. 001234567890" class="mono" oninput="this.value=this.value.replace(/\D/g,'');updatePreview()">
+        </div>
+        <div class="fg">
+          <label>Destination A/C Name (max 20 chars)</label>
+          <input type="text" id="s_dname" maxlength="20" placeholder="e.g. JOHN PERERA SILVA" oninput="this.value=this.value.toUpperCase();updateCount('s_dname','cnt_dname',20);updatePreview()">
+          <div class="hint" id="cnt_dname">0 / 20</div>
+        </div>
+        <div class="fg span2">
+          <label>Amount (LKR) — e.g. 15000.50</label>
+          <input type="number" id="s_amount" step="0.01" min="0.01" placeholder="0.00" style="max-width:240px" oninput="updatePreview()">
+        </div>
+        <div class="fg">
+          <label>Particulars (max 15 chars)</label>
+          <input type="text" id="s_part" maxlength="15" placeholder="e.g. COMPENSATION" oninput="this.value=this.value.toUpperCase();updateCount('s_part','cnt_part',15);updatePreview()">
+          <div class="hint" id="cnt_part">0 / 15</div>
+        </div>
+        <div class="fg">
+          <label>Reference (max 15 chars)</label>
+          <input type="text" id="s_ref" maxlength="15" placeholder="e.g. REF001/2026" oninput="this.value=this.value.toUpperCase();updateCount('s_ref','cnt_ref',15);updatePreview()">
+          <div class="hint" id="cnt_ref">0 / 15</div>
+        </div>
+        <div class="fg span2">
+          <label>Value Date</label>
+          <input type="date" id="s_date" style="max-width:200px" oninput="updatePreview()">
+        </div>
+      </div>
+      <div style="background:var(--navy);border-radius:6px;padding:12px 14px;margin-top:4px">
+        <div style="font-size:.67rem;color:rgba(255,255,255,.4);font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Record Preview (150 chars)</div>
+        <div id="recordPreview" class="mono" style="font-size:.72rem;color:var(--accent2);word-break:break-all;line-height:1.7">—</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('slipModal')">Cancel</button>
+      <button class="btn btn-primary" id="slipSaveBtn" onclick="saveSlip()">Add Slip</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Slips -->
+<div class="overlay" id="importModal">
+  <div class="modal modal-md">
+    <div class="mh"><h2>Copy Slips from Another Batch</h2><button class="mh-close" onclick="closeModal('importModal')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <label>Source Batch</label>
+        <select id="importSrc" onchange="renderImportSlips()"><option value="">— Select batch —</option></select>
+      </div>
+      <div id="importSlipList"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importSelected()">Copy Selected Slips</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="overlay" id="settingsModal">
+  <div class="modal modal-md">
+    <div class="mh"><h2>⚙ Settings</h2><button class="mh-close" onclick="closeModal('settingsModal')">✕</button></div>
+    <div class="mb">
+
+      <div class="stg-section" style="margin-top:0;padding-top:0;border-top:none">Google Sheets — Auto Sync</div>
+
+      <div class="info-box" style="margin-bottom:12px">
+        <strong>One-time setup — follow these steps:</strong>
+        <ol style="margin-top:8px">
+          <li>Click <strong>"Download Apps Script"</strong> below and save the file</li>
+          <li>Go to <a href="https://sheets.google.com" target="_blank" style="color:var(--navy2)">sheets.google.com</a> → create a <strong>new spreadsheet</strong></li>
+          <li>Click <strong>Extensions → Apps Script</strong></li>
+          <li>Delete all existing code, then paste the downloaded script</li>
+          <li>Click <strong>Deploy → New Deployment → Web App</strong></li>
+          <li>Set <em>Execute as:</em> <code>Me</code> &nbsp; <em>Who has access:</em> <code>Anyone</code></li>
+          <li>Click <strong>Authorize → Deploy</strong> → copy the <strong>Web App URL</strong></li>
+          <li>Paste the URL below and click <strong>Test &amp; Save</strong></li>
+        </ol>
+      </div>
+
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="downloadAppsScript()">⬇ Download Apps Script</button>
+
+      <div class="fg">
+        <label>Google Apps Script Web App URL</label>
+        <input type="text" id="gs_url" placeholder="https://script.google.com/macros/s/…/exec">
+      </div>
+      <div id="connStatus"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-primary btn-sm" onclick="testAndSave()">Test &amp; Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="forceSyncNow()">🔄 Sync Now</button>
+      </div>
+
+      <div class="stg-section">Local Backup</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="exportJSON()">⬇ Export Backup (JSON)</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importJSONInput').click()">⬆ Restore from Backup</button>
+        <input type="file" id="importJSONInput" accept=".json" style="display:none" onchange="importJSON(event)">
+      </div>
+
+      <div class="stg-section" style="color:var(--red);border-color:rgba(192,57,43,.2)">Danger Zone</div>
+      <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Local Data</button>
+
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── CONSTANTS ── */
+const ORIG_BANK   = '7010';
+const ORIG_BRANCH = '217';
+const ORIG_NAME   = 'DIV SEC HOROWPOTHANA'; // exactly 20 chars
+const STORE_KEY   = 'slipGenDSH_v2';
+
+/* ── STATE ── */
+let S = { batches:[], activeId:null, selAC:'7042198', gsUrl:'', lastSync:null };
+let editId = null;
+let syncTimer = null;
+let syncing = false;
+
+/* ── PERSISTENCE ── */
+function loadLocal() {
+  try { const d=localStorage.getItem(STORE_KEY); if(d) S={...S,...JSON.parse(d)}; } catch(e){}
+}
+function saveLocal() {
+  S.lastUpdated = Date.now();
+  localStorage.setItem(STORE_KEY, JSON.stringify(S));
+}
+function stateChanged() {
+  saveLocal();
+  scheduleSync();
+  render();
+}
+
+/* ── HELPERS ── */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+function padL(s,n,c='0'){ return String(s).padStart(n,c); }
+function padR(s,n,c=' '){ return String(s).padEnd(n,c).slice(0,n); }
+function fmtAmt(n){ return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function getActive(){ return S.batches.find(b=>b.id===S.activeId)||null; }
+
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  clearTimeout(t._t); t._t=setTimeout(()=>{t.className='toast';},3000);
+}
+
+/* ── RECORD BUILDER ── */
+function amountField(a){ return String(Math.round(parseFloat(a||0)*100)).padStart(12,'0'); }
+function dateField(d){
+  if(!d) return '000000';
+  const dt=new Date(d+'T00:00:00');
+  return String(dt.getFullYear()).slice(-2)+padL(dt.getMonth()+1,2)+padL(dt.getDate(),2);
+}
+function buildRecord(sl, origAC){
+  return '0000'+padL(sl.dbank,4)+padL(sl.dbranch,3)+padL(sl.dac,12)+padR(sl.dname,20)+
+    '23'+'00'+'0'+'000000'+amountField(sl.amount)+'SLR'+ORIG_BANK+padL(ORIG_BRANCH,3)+
+    padL(origAC,12)+padR(ORIG_NAME,20)+padR(sl.part,15)+padR(sl.ref,15)+dateField(sl.date)+'000000';
+}
+
+/* ── AC SELECTOR ── */
+function selectAC(ac){
+  S.selAC=ac;
+  document.getElementById('acBtn1').className='ac-btn'+(ac==='7042198'?' on':'');
+  document.getElementById('acBtn2').className='ac-btn'+(ac==='5620391'?' on':'');
+  saveLocal(); updatePreview();
+}
+
+/* ── SYNC ENGINE ── */
+function scheduleSync(){
+  if(!S.gsUrl) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToSheets, 3000);
+  setSyncBadge('syncing','Saving in 3s…');
+}
+
+async function syncToSheets(){
+  if(!S.gsUrl || syncing) return;
+  syncing=true;
+  setSyncBadge('syncing','Saving…');
+  try {
+    const res = await fetch(S.gsUrl, {
+      method:'POST',
+      body: JSON.stringify({
+        action:'save',
+        state: JSON.stringify(S),
+        batches: S.batches
+      }),
+      headers:{'Content-Type':'text/plain'} // avoid preflight
+    });
+    const json = await res.json();
+    if(json.success){
+      S.lastSync = Date.now();
+      saveLocal();
+      const t=new Date(S.lastSync).toLocaleTimeString('en-LK',{hour:'2-digit',minute:'2-digit'});
+      setSyncBadge('ok','Synced '+t);
+    } else {
+      setSyncBadge('err','Sync Error ↺');
+      console.warn('Sync error:',json.error);
+    }
+  } catch(err){
+    setSyncBadge('err','Sync Error ↺');
+    console.warn('Sync failed:',err);
+  }
+  syncing=false;
+}
+
+async function loadFromSheets(){
+  if(!S.gsUrl) return;
+  setSyncBadge('syncing','Loading…');
+  try {
+    const url = S.gsUrl + (S.gsUrl.includes('?')?'&':'?')+'action=load&t='+Date.now();
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.success && json.data){
+      const remote = JSON.parse(json.data);
+      if(!remote.lastUpdated || (remote.lastUpdated||0) >= (S.lastUpdated||0)){
+        S = {...S, ...remote, gsUrl:S.gsUrl};
+        saveLocal();
+        render();
+        const t=new Date().toLocaleTimeString('en-LK',{hour:'2-digit',minute:'2-digit'});
+        setSyncBadge('ok','Synced '+t);
+        toast('Data loaded from Google Sheets.');
+      } else {
+        setSyncBadge('ok','Synced (local is newer)');
+        syncToSheets();
+      }
+    } else {
+      setSyncBadge('ok','Connected (empty sheet)');
+      syncToSheets();
+    }
+  } catch(err){
+    setSyncBadge('err','Load Error ↺');
+    console.warn('Load failed:',err);
+  }
+}
+
+function setSyncBadge(state, text){
+  const b=document.getElementById('syncBadge');
+  const t=document.getElementById('syncText');
+  b.className='sync-badge sb-'+state;
+  t.textContent=text;
+  if(state==='err') b.title='Click to retry sync'; else b.title='';
+}
+
+document.getElementById('syncBadge').addEventListener('click',function(){
+  if(this.classList.contains('sb-err') && S.gsUrl) syncToSheets();
+});
+
+/* ── SETTINGS ACTIONS ── */
+async function testAndSave(){
+  const url = document.getElementById('gs_url').value.trim();
+  if(!url){ showConnStatus('err','Please paste a URL first.'); return; }
+  showConnStatus('wait','Testing connection…');
+  try {
+    const testUrl = url+(url.includes('?')?'&':'?')+'action=ping&t='+Date.now();
+    const res = await fetch(testUrl);
+    const json = await res.json();
+    if(json.success||json.status==='ok'){
+      S.gsUrl=url; saveLocal();
+      showConnStatus('ok','✓ Connected! Auto-sync is now active.');
+      setSyncBadge('syncing','Initial sync…');
+      document.getElementById('setupBanner').style.display='none';
+      toast('Google Sheets connected.');
+      setTimeout(()=>{ loadFromSheets(); },500);
+    } else {
+      showConnStatus('err','Connection failed: '+(json.error||'Unexpected response'));
+    }
+  } catch(err){
+    showConnStatus('err','Connection failed: '+err.message);
+  }
+}
+
+async function forceSyncNow(){
+  if(!S.gsUrl){ toast('No Google Sheets URL configured.','err'); return; }
+  await syncToSheets();
+  toast('Sync complete.');
+}
+
+function showConnStatus(type,msg){
+  const el=document.getElementById('connStatus');
+  const cls={ok:'conn-ok',err:'conn-err',wait:'conn-wait'};
+  el.innerHTML=`<div class="conn-status ${cls[type]}">${esc(msg)}</div>`;
+}
+
+/* ── APPS SCRIPT DOWNLOAD ── */
+function downloadAppsScript(){
+  const script = `// SLIP Generator — Google Apps Script
+// Setup: Extensions → Apps Script → paste this → Deploy as Web App
+// Execute as: Me | Who has access: Anyone
+
+var SHEET_KEY = 'APP_DATA';
+
+function doGet(e) {
+  var action = (e.parameter && e.parameter.action) || 'load';
+  if (action === 'ping') {
+    return json({success:true, status:'ok', app:'SLIP Generator DS Horowpothana'});
+  }
+  // action === 'load'
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_KEY);
+  var data = null;
+  if (sheet && sheet.getLastRow() > 0) {
+    data = sheet.getRange(1,1).getValue();
+  }
+  return json({success:true, data:data});
+}
+
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Save full state (for restore)
+    var dataSheet = ss.getSheetByName(SHEET_KEY);
+    if (!dataSheet) {
+      dataSheet = ss.insertSheet(SHEET_KEY);
+      dataSheet.hideSheet();
+    }
+    dataSheet.getRange(1,1).setValue(payload.state);
+
+    // Update human-readable batch sheets
+    if (payload.batches && payload.batches.length > 0) {
+      payload.batches.forEach(function(batch) {
+        var name = batch.name.replace(/[\\/\\\\*\\[\\]:?]/g,'').slice(0,30) || 'Batch';
+        var sheet = ss.getSheetByName(name);
+        if (!sheet) sheet = ss.insertSheet(name);
+        sheet.clearContents();
+        var hdrs = ['#','Dest Bank','Dest Branch','Dest A/C No','Dest A/C Name',
+                    'Amount (LKR)','Particulars','Reference','Value Date'];
+        sheet.appendRow(hdrs);
+        batch.slips.forEach(function(sl, i) {
+          sheet.appendRow([i+1, sl.dbank, sl.dbranch, sl.dac, sl.dname,
+                           parseFloat(sl.amount||0), sl.part, sl.ref, sl.date]);
+        });
+        var hdr = sheet.getRange(1,1,1,hdrs.length);
+        hdr.setFontWeight('bold').setBackground('#0f2744').setFontColor('#ffffff');
+        sheet.setFrozenRows(1);
+        try { sheet.autoResizeColumns(1, hdrs.length); } catch(e) {}
+      });
+    }
+    return json({success:true});
+  } catch(err) {
+    return json({success:false, error:err.toString()});
+  }
+}
+
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+                       .setMimeType(ContentService.MimeType.JSON);
+}`;
+  const blob=new Blob([script],{type:'text/javascript'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='slipgen_appsscript.js'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── RENDER ── */
+function render(){
+  renderBatches();
+  renderSlips();
+  document.getElementById('setupBanner').style.display = S.gsUrl ? 'none' : 'flex';
+  document.getElementById('acBtn1').className='ac-btn'+(S.selAC==='7042198'?' on':'');
+  document.getElementById('acBtn2').className='ac-btn'+(S.selAC==='5620391'?' on':'');
+}
+
+function renderBatches(){
+  const el=document.getElementById('batchList');
+  if(!S.batches.length){
+    el.innerHTML=`<div style="text-align:center;padding:24px 0;color:var(--gray4)"><div style="font-size:2rem;margin-bottom:8px">📂</div><div style="font-size:.8rem">No batches yet.<br>Create one to get started.</div></div>`;
+    return;
+  }
+  el.innerHTML=S.batches.map(b=>{
+    const tot=b.slips.reduce((s,sl)=>s+parseFloat(sl.amount||0),0);
+    return `<div class="batch-item${b.id===S.activeId?' active':''}" onclick="selectBatch('${b.id}')">
+      <div class="batch-name">${esc(b.name)}</div>
+      <div class="batch-meta">${b.slips.length} slip(s) · LKR ${fmtAmt(tot)}${b.note?'<br>'+esc(b.note):''}</div>
+      <button class="batch-del" title="Delete" onclick="event.stopPropagation();deleteBatch('${b.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function renderSlips(){
+  const batch=getActive();
+  const ti=document.getElementById('batchTitle');
+  const sb=document.getElementById('slipBtns');
+  const ar=document.getElementById('slipArea');
+  const gb=document.getElementById('genBar');
+  if(!batch){
+    ti.innerHTML='📋 Slips — No Batch Selected';
+    sb.style.display='none'; ar.innerHTML=`<div class="tbl-empty"><div class="ico">📄</div><div>Select or create a batch to manage slips.</div></div>`;
+    gb.style.display='none'; return;
+  }
+  ti.innerHTML=`📋 Slips — <span style="color:var(--accent2)">${esc(batch.name)}</span>`;
+  sb.style.display='flex'; gb.style.display='flex';
+  const tot=batch.slips.reduce((s,sl)=>s+parseFloat(sl.amount||0),0);
+  document.getElementById('genInfo').innerHTML=`${batch.slips.length} slip(s) &nbsp;·&nbsp; <span class="gen-total">LKR ${fmtAmt(tot)}</span>`;
+  if(!batch.slips.length){
+    ar.innerHTML=`<div class="tbl-empty"><div class="ico">➕</div><div>No slips yet. Click <strong>+ Add Slip</strong> to begin.</div></div>`;
+    return;
+  }
+  const rows=batch.slips.map((sl,i)=>`<tr>
+    <td style="color:var(--gray4);font-family:var(--mono)">${i+1}</td>
+    <td><strong>${esc(sl.dname)}</strong><div class="mono" style="font-size:.71rem;color:var(--gray4)">${esc(sl.dac)}</div></td>
+    <td class="mono">${esc(sl.dbank)}<span style="color:var(--gray3)">-</span>${esc(sl.dbranch)}</td>
+    <td style="color:var(--green);font-weight:700">LKR ${fmtAmt(sl.amount)}</td>
+    <td>${esc(sl.part)}</td>
+    <td>${esc(sl.ref)}</td>
+    <td class="mono" style="font-size:.74rem">${sl.date||'—'}</td>
+    <td><div style="display:flex;gap:4px">
+      <button class="btn btn-ghost btn-xs" title="Edit" onclick="openEditSlip('${sl.id}')">✏</button>
+      <button class="btn btn-ghost btn-xs" title="Duplicate" onclick="dupSlip('${sl.id}')">⧉</button>
+      <button class="btn btn-danger btn-xs" title="Delete" onclick="delSlip('${sl.id}')">🗑</button>
+    </div></td>
+  </tr>`).join('');
+  ar.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Recipient</th><th>Bank-Branch</th><th>Amount</th><th>Particulars</th><th>Reference</th><th>Value Date</th><th>Actions</th></tr></thead>
+    <tbody>${rows}<tr class="tbl-total">
+      <td colspan="3" style="text-align:right;font-size:.77rem;color:var(--gray5)">Total (${batch.slips.length} slips)</td>
+      <td style="color:var(--green);font-weight:700">LKR ${fmtAmt(tot)}</td><td colspan="4"></td>
+    </tr></tbody>
+  </table></div>`;
+}
+
+/* ── BATCH ── */
+function selectBatch(id){ S.activeId=id; saveLocal(); renderSlips(); }
+function createBatch(){
+  const name=document.getElementById('nb_name').value.trim();
+  if(!name){ toast('Please enter a batch name.','err'); return; }
+  const b={id:uid(),name,note:document.getElementById('nb_note').value.trim(),slips:[],created:Date.now()};
+  S.batches.push(b); S.activeId=b.id;
+  stateChanged(); closeModal('newBatchModal'); toast(`Batch "${name}" created.`);
+}
+function deleteBatch(id){
+  const b=S.batches.find(x=>x.id===id);
+  if(!confirm(`Delete batch "${b.name}" and all its ${b.slips.length} slip(s)?`)) return;
+  S.batches=S.batches.filter(x=>x.id!==id);
+  if(S.activeId===id) S.activeId=S.batches.length?S.batches[0].id:null;
+  stateChanged(); toast('Batch deleted.','err');
+}
+
+/* ── SLIP FORM ── */
+function updateCount(inputId,countId,max){
+  document.getElementById(countId).textContent=document.getElementById(inputId).value.length+' / '+max;
+}
+function clearForm(){
+  ['s_dbank','s_dbranch','s_dac','s_dname','s_amount','s_part','s_ref','s_date'].forEach(id=>document.getElementById(id).value='');
+  ['cnt_dname','cnt_part','cnt_ref'].forEach((id,i)=>document.getElementById(id).textContent='0 / '+[20,15,15][i]);
+  document.getElementById('recordPreview').textContent='—';
+}
+function fillForm(sl){
+  document.getElementById('s_dbank').value=sl.dbank||'';
+  document.getElementById('s_dbranch').value=sl.dbranch||'';
+  document.getElementById('s_dac').value=sl.dac||'';
+  document.getElementById('s_dname').value=sl.dname||'';
+  document.getElementById('s_amount').value=sl.amount||'';
+  document.getElementById('s_part').value=sl.part||'';
+  document.getElementById('s_ref').value=sl.ref||'';
+  document.getElementById('s_date').value=sl.date||'';
+  updateCount('s_dname','cnt_dname',20);
+  updateCount('s_part','cnt_part',15);
+  updateCount('s_ref','cnt_ref',15);
+  updatePreview();
+}
+function readForm(){
+  return {
+    dbank:document.getElementById('s_dbank').value.trim(),
+    dbranch:document.getElementById('s_dbranch').value.trim(),
+    dac:document.getElementById('s_dac').value.trim(),
+    dname:document.getElementById('s_dname').value.trim(),
+    amount:document.getElementById('s_amount').value.trim(),
+    part:document.getElementById('s_part').value.trim(),
+    ref:document.getElementById('s_ref').value.trim(),
+    date:document.getElementById('s_date').value.trim()
+  };
+}
+function validateSlip(sl){
+  if(!sl.dbank) return 'Destination Bank No. is required.';
+  if(!sl.dbranch) return 'Destination Branch No. is required.';
+  if(!sl.dac) return 'Destination A/C No. is required.';
+  if(!sl.dname) return 'Destination A/C Name is required.';
+  if(!sl.amount||parseFloat(sl.amount)<=0) return 'A valid amount is required.';
+  if(!sl.date) return 'Value Date is required.';
+  return null;
+}
+function updatePreview(){
+  const sl=readForm();
+  const el=document.getElementById('recordPreview');
+  if(validateSlip(sl)){ el.textContent='— Fill required fields to preview —'; return; }
+  const rec=buildRecord(sl,S.selAC);
+  const seg=[
+    {t:'0000',c:'#64748b'},{t:padL(sl.dbank,4),c:'#7dd3fc'},{t:padL(sl.dbranch,3),c:'#86efac'},
+    {t:padL(sl.dac,12),c:'#fde68a'},{t:padR(sl.dname,20),c:'#fca5a5'},
+    {t:'2300',c:'#64748b'},{t:'0000000',c:'#64748b'},{t:amountField(sl.amount),c:'#6ee7b7'},
+    {t:'SLR',c:'#64748b'},{t:ORIG_BANK,c:'#c4b5fd'},{t:padL(ORIG_BRANCH,3),c:'#c4b5fd'},
+    {t:padL(S.selAC,12),c:'#c4b5fd'},{t:padR(ORIG_NAME,20),c:'#c4b5fd'},
+    {t:padR(sl.part,15),c:'#f9a8d4'},{t:padR(sl.ref,15),c:'#fbbf24'},
+    {t:dateField(sl.date),c:'#67e8f9'},{t:'000000',c:'#64748b'}
+  ];
+  el.innerHTML=seg.map(s=>`<span style="color:${s.c}">${s.t}</span>`).join('')+
+    `<div style="margin-top:4px;font-size:.65rem;color:rgba(255,255,255,.3)">Length: ${rec.length} chars ${rec.length===150?'✓':'⚠'}</div>`;
+}
+
+function openAddSlip(){
+  editId=null;
+  document.getElementById('slipModalTitle').textContent='Add Slip';
+  document.getElementById('slipSaveBtn').textContent='Add Slip';
+  clearForm(); openModal('slipModal');
+  setTimeout(()=>document.getElementById('s_dbank').focus(),80);
+}
+function openEditSlip(id){
+  const sl=getActive().slips.find(s=>s.id===id); if(!sl) return;
+  editId=id;
+  document.getElementById('slipModalTitle').textContent='Edit Slip';
+  document.getElementById('slipSaveBtn').textContent='Update Slip';
+  fillForm(sl); openModal('slipModal');
+}
+function dupSlip(id){
+  const sl=getActive().slips.find(s=>s.id===id); if(!sl) return;
+  editId=null;
+  document.getElementById('slipModalTitle').textContent='Add Slip (Copied)';
+  document.getElementById('slipSaveBtn').textContent='Add Slip';
+  fillForm({...sl}); openModal('slipModal');
+}
+function delSlip(id){
+  if(!confirm('Delete this slip?')) return;
+  const b=getActive(); b.slips=b.slips.filter(s=>s.id!==id);
+  stateChanged(); toast('Slip deleted.','err');
+}
+function saveSlip(){
+  const sl=readForm(); const err=validateSlip(sl);
+  if(err){ toast(err,'err'); return; }
+  const b=getActive();
+  if(editId){ const i=b.slips.findIndex(s=>s.id===editId); b.slips[i]={...b.slips[i],...sl}; toast('Slip updated.'); }
+  else { b.slips.push({...sl,id:uid()}); toast('Slip added.'); }
+  stateChanged(); closeModal('slipModal');
+}
+
+/* ── IMPORT SLIPS ── */
+function openImportModal(){
+  const sel=document.getElementById('importSrc');
+  sel.innerHTML='<option value="">— Select batch —</option>';
+  S.batches.filter(b=>b.id!==S.activeId).forEach(b=>{
+    sel.innerHTML+=`<option value="${b.id}">${esc(b.name)} (${b.slips.length} slips)</option>`;
+  });
+  document.getElementById('importSlipList').innerHTML='';
+  if(!S.batches.filter(b=>b.id!==S.activeId).length)
+    document.getElementById('importSlipList').innerHTML='<div style="color:var(--gray4);text-align:center;padding:16px;font-size:.82rem">No other batches available.</div>';
+  openModal('importModal');
+}
+function renderImportSlips(){
+  const srcId=document.getElementById('importSrc').value;
+  const el=document.getElementById('importSlipList'); if(!srcId){el.innerHTML='';return;}
+  const src=S.batches.find(b=>b.id===srcId);
+  if(!src||!src.slips.length){el.innerHTML='<div style="color:var(--gray4);font-size:.82rem;padding:8px">No slips in this batch.</div>';return;}
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray4)">${src.slips.length} slips available</div>
+    <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('#importSlipList input').forEach(c=>c.checked=true)">Select All</button>
+  </div>`+src.slips.map(sl=>`
+    <div class="isl-item">
+      <input type="checkbox" value="${sl.id}" data-src="${src.id}">
+      <div style="flex:1"><div class="isl-name">${esc(sl.dname)}</div><div class="isl-meta">${esc(sl.dac)} | ${esc(sl.dbank)}-${esc(sl.dbranch)} | ${esc(sl.part)}</div></div>
+      <div class="isl-amt">LKR ${fmtAmt(sl.amount)}</div>
+    </div>`).join('');
+}
+function importSelected(){
+  const cbs=[...document.querySelectorAll('#importSlipList input:checked')];
+  if(!cbs.length){toast('No slips selected.','err');return;}
+  const srcId=cbs[0].dataset.src;
+  const src=S.batches.find(b=>b.id===srcId);
+  const tgt=getActive();
+  cbs.forEach(cb=>{const sl=src.slips.find(s=>s.id===cb.value);if(sl)tgt.slips.push({...sl,id:uid()});});
+  stateChanged(); closeModal('importModal'); toast(`${cbs.length} slip(s) copied.`);
+}
+
+/* ── FILE GENERATION ── */
+function generateFile(){
+  const batch=getActive();
+  if(!batch||!batch.slips.length){toast('No slips to export.','err');return;}
+  const fn=document.getElementById('outFileName').value.trim();
+  if(!fn){toast('Please enter a file name.','err');return;}
+  const records=batch.slips.map(sl=>buildRecord(sl,S.selAC));
+  const bad=records.filter(r=>r.length!==150);
+  if(bad.length){toast(`Error: ${bad.length} record(s) wrong length.`,'err');return;}
+  const blob=new Blob([records.join('\r\n')],{type:'text/plain;charset=ascii'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=fn+'.txt'; a.click();
+  URL.revokeObjectURL(url);
+  toast(`"${fn}.txt" downloaded — ${records.length} record(s).`);
+}
+
+/* ── BACKUP ── */
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='slipgen_backup_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSON(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!Array.isArray(d.batches)) throw new Error('Invalid backup file.');
+      if(!confirm(`Import ${d.batches.length} batch(es)? This replaces all current data.`)) return;
+      S={...S,...d}; saveLocal(); closeModal('settingsModal'); render();
+      toast('Data restored from backup.');
+    } catch(err){toast('Import failed: '+err.message,'err');}
+  };
+  r.readAsText(file); e.target.value='';
+}
+function clearAllData(){
+  if(!confirm('Delete ALL local data? This cannot be undone.')) return;
+  S={batches:[],activeId:null,selAC:'7042198',gsUrl:S.gsUrl,lastSync:null};
+  saveLocal(); closeModal('settingsModal'); render(); toast('Local data cleared.','err');
+}
+
+/* ── MODAL ── */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(ov=>ov.classList.remove('open'));});
+document.getElementById('nb_name').addEventListener('keydown',e=>{if(e.key==='Enter')createBatch();});
+
+/* ── INIT ── */
+loadLocal();
+document.getElementById('gs_url').value=S.gsUrl||'';
+if(S.gsUrl){
+  setSyncBadge('syncing','Connecting…');
+  loadFromSheets();
+} else {
+  setSyncBadge('none','Not configured');
+}
+render();
+</script>
+</body>
+</html>
