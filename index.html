@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="SLIP Gen">
 <meta name="application-name" content="SLIP File Generator">
 <meta name="description" content="SLIP File Generator — Divisional Secretariat Horowpothana">
-<link rel="manifest" id="pwaManifest">
+<link rel="manifest" href="./manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SLIP File Generator — DS Horowpothana</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -957,91 +957,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 document.getElementById('nb_name').addEventListener('keydown',e=>{if(e.key==='Enter')createBatch();});
 
 
-/* ── PWA: MANIFEST (inline blob) ── */
+/* ── PWA: MANIFEST ── loaded from manifest.json */
+/* ── PWA: SERVICE WORKER ── */
 (function(){
-  const icons = [];
-  // Generate a simple SVG icon as data URL
-  const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="#0f2744" rx="24"/><rect x="16" y="16" width="160" height="160" fill="#0f2744" rx="16"/><rect x="0" y="140" width="192" height="10" fill="#e8a020"/><text x="50%" y="95" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="64" fill="#e8a020">SLP</text><text x="50%" y="155" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="16" fill="rgba(255,255,255,0.6)">DS HOROWPOTHANA</text></svg>`;
-  const svgBlob = new Blob([svgIcon], {type:'image/svg+xml'});
-  const svgUrl = URL.createObjectURL(svgBlob);
-
-  const manifest = {
-    name: "SLIP File Generator — DS Horowpothana",
-    short_name: "SLIP Gen",
-    description: "SLIP File Generator for Divisional Secretariat Horowpothana, Accounts Branch",
-    start_url: "./",
-    display: "standalone",
-    background_color: "#0f2744",
-    theme_color: "#0f2744",
-    orientation: "landscape-primary",
-    icons: [
-      { src: svgUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
-      { src: svgUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
-    ],
-    categories: ["productivity", "utilities"],
-    lang: "en"
-  };
-
-  const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-  const mUrl = URL.createObjectURL(mBlob);
-  document.getElementById('pwaManifest').href = mUrl;
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js')
+    .then(function(reg){ console.log('[PWA] SW registered:', reg.scope); })
+    .catch(function(err){ console.warn('[PWA] SW failed:', err); });
 })();
-
-/* ── PWA: SERVICE WORKER (inline blob) ── */
-(function(){
-  const swCode = `
-const CACHE = 'slipgen-dsh-v1';
-const ASSETS = [self.registration.scope];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  // Only cache same-origin requests; let Google Sheets requests pass through
-  const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin && !url.hostname.endsWith('googleapis.com') &&
-      !url.hostname.endsWith('google.com') && !url.hostname.endsWith('fonts.gstatic.com')) {
-    return;
-  }
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(response => {
-        if (response && response.status === 200 && response.type !== 'opaque') {
-          const clone = response.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-    })
-  );
-});
-`;
-  if ('serviceWorker' in navigator) {
-    const swBlob = new Blob([swCode], {type:'application/javascript'});
-    const swUrl = URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl, {scope: './'})
-      .then(reg => {
-        console.log('[PWA] Service Worker registered:', reg.scope);
-      })
-      .catch(err => {
-        console.warn('[PWA] SW registration failed (normal on file://):', err);
-      });
-  }
-})();
-
 /* ── PWA: INSTALL PROMPT ── */
 let _deferredPrompt = null;
 
