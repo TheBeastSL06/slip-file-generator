@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="SLIP Gen">
 <meta name="application-name" content="SLIP File Generator">
 <meta name="description" content="SLIP File Generator — Divisional Secretariat Horowpothana">
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" id="pwaManifest">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SLIP File Generator — DS Horowpothana</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -176,6 +176,7 @@ tbody tr:hover td{background:#fafbfc}
 @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 .installed-badge{display:none;align-items:center;gap:5px;padding:4px 10px;background:rgba(26,122,74,.2);border:1px solid rgba(26,122,74,.4);border-radius:99px;font-size:.7rem;color:#6ee7b7;font-family:var(--mono)}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -269,7 +270,10 @@ tbody tr:hover td{background:#fafbfc}
         <input type="text" id="outFileName" maxlength="8" placeholder="CYCLN001" class="mono" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
       </div>
       <div class="gen-info" id="genInfo">0 slips · LKR 0.00</div>
-      <button class="btn btn-success" style="font-size:.9rem;padding:10px 20px" onclick="generateFile()">⬇ Download SLIP File (.txt)</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-success" style="font-size:.9rem;padding:10px 20px" onclick="generateFile()">⬇ Download SLIP File (.txt)</button>
+        <button class="btn" style="font-size:.9rem;padding:10px 20px;background:#b91c1c;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600" onclick="generatePDF()">⬇ Download Summary (.pdf)</button>
+      </div>
     </div>
   </main>
 </div>
@@ -920,6 +924,166 @@ function generateFile(){
   toast(`"${fn}.txt" downloaded — ${records.length} record(s).`);
 }
 
+
+/* ── PDF SUMMARY GENERATION ── */
+function generatePDF(){
+  const batch = getActive();
+  if(!batch || !batch.slips.length){ toast('No slips to export.','err'); return; }
+  const fn = document.getElementById('outFileName').value.trim();
+  if(!fn){ toast('Please enter a file name.','err'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const PW = 210, PH = 297;
+  const navy=[15,39,68], gold=[232,160,32], white=[255,255,255];
+  const slips = batch.slips;
+  const total = slips.reduce((s,sl)=>s+parseFloat(sl.amount||0),0);
+
+  // timestamp
+  const now = new Date();
+  const ts = now.toLocaleDateString('en-LK',{year:'numeric',month:'long',day:'numeric'})
+           + '  ' + now.toLocaleTimeString('en-LK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // ── HEADER ──
+  doc.setFillColor(...navy);
+  doc.rect(0, 0, PW, 28, 'F');
+  doc.setFillColor(...gold);
+  doc.rect(0, 28, PW, 1.5, 'F');
+
+  doc.setTextColor(...gold);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('Payment Slip Summary Report', PW/2, 12, {align:'center'});
+
+  doc.setTextColor(180,200,220);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('Batch: '+batch.name+(batch.note?' — '+batch.note:''), PW/2, 19, {align:'center'});
+  doc.text('File: '+fn+'.txt   |   Generated: '+ts, PW/2, 24, {align:'center'});
+
+  // ── TABLE ──
+  const margin = 14;
+  const tableW = PW - margin*2;
+  // col widths: No, Name, Bank, Branch, Account, Amount
+  const cols = [
+    { h:'No.',         w:10,  align:'center' },
+    { h:'Recipient Name',  w:60,  align:'left'   },
+    { h:'Bank',        w:16,  align:'center' },
+    { h:'Branch',      w:16,  align:'center' },
+    { h:'Account No',  w:46,  align:'left'   },
+    { h:'Amount (LKR)',w:34,  align:'right'  },
+  ];
+  const rowH = 8, hdrH = 9;
+  let y = 36;
+
+  // header row
+  doc.setFillColor(...navy);
+  doc.rect(margin, y, tableW, hdrH, 'F');
+  let cx = margin;
+  cols.forEach(col => {
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...gold);
+    const tx = col.align==='right' ? cx+col.w-3
+             : col.align==='center' ? cx+col.w/2 : cx+3;
+    doc.text(col.h, tx, y+6, {align: col.align==='right'?'right':col.align==='center'?'center':'left'});
+    cx += col.w;
+  });
+  y += hdrH;
+
+  // data rows
+  slips.forEach((sl,i) => {
+    // page break check
+    if(y + rowH > PH - 24){
+      doc.addPage();
+      y = 16;
+      // repeat header on new page
+      doc.setFillColor(...navy);
+      doc.rect(margin, y, tableW, hdrH, 'F');
+      let cxr = margin;
+      cols.forEach(col => {
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(7);
+        doc.setTextColor(...gold);
+        const tx = col.align==='right' ? cxr+col.w-3
+                 : col.align==='center' ? cxr+col.w/2 : cxr+3;
+        doc.text(col.h, tx, y+6, {align:col.align==='right'?'right':col.align==='center'?'center':'left'});
+        cxr += col.w;
+      });
+      y += hdrH;
+    }
+
+    // alternating row bg
+    doc.setFillColor(i%2===0 ? 248 : 255, i%2===0 ? 250 : 255, i%2===0 ? 253 : 255);
+    doc.rect(margin, y, tableW, rowH, 'F');
+
+    const vals = [
+      String(i+1),
+      sl.dname||'',
+      sl.dbank||'',
+      sl.dbranch||'',
+      sl.dac||'',
+      fmtAmt(sl.amount),
+    ];
+    let cx2 = margin;
+    cols.forEach((col,ci) => {
+      doc.setFont('helvetica', ci===1?'bold':'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...(ci===5 ? [26,122,74] : navy));
+      const tx = col.align==='right' ? cx2+col.w-3
+               : col.align==='center' ? cx2+col.w/2 : cx2+3;
+      const txt = doc.splitTextToSize(String(vals[ci]), col.w-4)[0];
+      doc.text(txt, tx, y+5.5, {align:col.align==='right'?'right':col.align==='center'?'center':'left'});
+      cx2 += col.w;
+    });
+
+    // row bottom border
+    doc.setDrawColor(220,228,238);
+    doc.setLineWidth(0.15);
+    doc.line(margin, y+rowH, margin+tableW, y+rowH);
+    y += rowH;
+  });
+
+  // ── TOTAL ROW ──
+  if(y + 10 > PH - 24){ doc.addPage(); y = 16; }
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y, margin+tableW, y);
+  doc.setFillColor(233,240,251);
+  doc.rect(margin, y, tableW, 10, 'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...navy);
+  doc.text('Total Slip Amount  ('+slips.length+' slips)', margin+3, y+6.8);
+  doc.setTextColor(26,122,74);
+  doc.text('LKR '+fmtAmt(total), margin+tableW-3, y+6.8, {align:'right'});
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y+10, margin+tableW, y+10);
+  y += 10;
+
+  // ── FOOTER (every page) ──
+  const pageCount = doc.getNumberOfPages();
+  for(let p=1; p<=pageCount; p++){
+    doc.setPage(p);
+    doc.setFillColor(...navy);
+    doc.rect(0, PH-14, PW, 14, 'F');
+    doc.setFillColor(...gold);
+    doc.rect(0, PH-14, PW, 1, 'F');
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(6);
+    doc.setTextColor(170,190,210);
+    doc.text('Report generated by Slip File Generator — Account Branch, Divisional Secretariat Horowpothana', PW/2, PH-8, {align:'center'});
+    doc.setTextColor(...gold);
+    doc.text(ts, PW/2, PH-4, {align:'center'});
+    doc.setTextColor(170,190,210);
+    doc.text('Page '+p+' of '+pageCount, PW-margin, PH-4, {align:'right'});
+  }
+
+  doc.save(fn+'_summary.pdf');
+  toast('"'+fn+'_summary.pdf" downloaded — '+slips.length+' slip(s).','ok');
+}
+
 /* ── BACKUP ── */
 function exportJSON(){
   const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
@@ -957,14 +1121,91 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 document.getElementById('nb_name').addEventListener('keydown',e=>{if(e.key==='Enter')createBatch();});
 
 
-/* ── PWA: MANIFEST ── loaded from manifest.json */
-/* ── PWA: SERVICE WORKER ── */
+/* ── PWA: MANIFEST (inline blob) ── */
 (function(){
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js')
-    .then(function(reg){ console.log('[PWA] SW registered:', reg.scope); })
-    .catch(function(err){ console.warn('[PWA] SW failed:', err); });
+  const icons = [];
+  // Generate a simple SVG icon as data URL
+  const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="#0f2744" rx="24"/><rect x="16" y="16" width="160" height="160" fill="#0f2744" rx="16"/><rect x="0" y="140" width="192" height="10" fill="#e8a020"/><text x="50%" y="95" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="64" fill="#e8a020">SLP</text><text x="50%" y="155" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="16" fill="rgba(255,255,255,0.6)">DS HOROWPOTHANA</text></svg>`;
+  const svgBlob = new Blob([svgIcon], {type:'image/svg+xml'});
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  const manifest = {
+    name: "SLIP File Generator — DS Horowpothana",
+    short_name: "SLIP Gen",
+    description: "SLIP File Generator for Divisional Secretariat Horowpothana, Accounts Branch",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#0f2744",
+    theme_color: "#0f2744",
+    orientation: "landscape-primary",
+    icons: [
+      { src: svgUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+      { src: svgUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+    ],
+    categories: ["productivity", "utilities"],
+    lang: "en"
+  };
+
+  const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  const mUrl = URL.createObjectURL(mBlob);
+  document.getElementById('pwaManifest').href = mUrl;
 })();
+
+/* ── PWA: SERVICE WORKER (inline blob) ── */
+(function(){
+  const swCode = `
+const CACHE = 'slipgen-dsh-v1';
+const ASSETS = [self.registration.scope];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  // Only cache same-origin requests; let Google Sheets requests pass through
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin && !url.hostname.endsWith('googleapis.com') &&
+      !url.hostname.endsWith('google.com') && !url.hostname.endsWith('fonts.gstatic.com')) {
+    return;
+  }
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(response => {
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
+    })
+  );
+});
+`;
+  if ('serviceWorker' in navigator) {
+    const swBlob = new Blob([swCode], {type:'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, {scope: './'})
+      .then(reg => {
+        console.log('[PWA] Service Worker registered:', reg.scope);
+      })
+      .catch(err => {
+        console.warn('[PWA] SW registration failed (normal on file://):', err);
+      });
+  }
+})();
+
 /* ── PWA: INSTALL PROMPT ── */
 let _deferredPrompt = null;
 
