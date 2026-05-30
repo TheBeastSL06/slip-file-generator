@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="theme-color" content="#0f2744">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SLIP Gen">
+<meta name="application-name" content="SLIP File Generator">
+<meta name="description" content="SLIP File Generator — Divisional Secretariat Horowpothana">
+<link rel="manifest" id="pwaManifest">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SLIP File Generator — DS Horowpothana</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -154,11 +161,38 @@ tbody tr:hover td{background:#fafbfc}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.ok{background:var(--navy);color:var(--accent2);border-left:4px solid var(--accent)}
 .toast.err{background:#fff0ee;color:var(--red);border-left:4px solid var(--red)}
+
+/* INSTALL BANNER */
+.install-bar{background:linear-gradient(135deg,var(--navy2),var(--navy3));border-bottom:2px solid var(--accent);padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:.82rem;color:#fff;animation:slideDown .4s ease}
+.install-bar .ib-icon{font-size:1.3rem;flex-shrink:0}
+.install-bar .ib-text{flex:1}
+.install-bar .ib-text strong{display:block;font-size:.87rem;margin-bottom:2px}
+.install-bar .ib-text span{color:rgba(255,255,255,.6);font-size:.76rem}
+.install-bar .ib-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-install{background:var(--accent);color:var(--navy);border:none;padding:7px 16px;border-radius:5px;font-weight:700;font-size:.8rem;cursor:pointer;transition:all .18s}
+.btn-install:hover{background:var(--accent2)}
+.btn-dismiss{background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.2);padding:7px 12px;border-radius:5px;font-size:.8rem;cursor:pointer;transition:all .18s}
+.btn-dismiss:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.installed-badge{display:none;align-items:center;gap:5px;padding:4px 10px;background:rgba(26,122,74,.2);border:1px solid rgba(26,122,74,.4);border-radius:99px;font-size:.7rem;color:#6ee7b7;font-family:var(--mono)}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
+<!-- INSTALL BANNER -->
+<div id="installBanner" style="display:none" class="install-bar">
+  <div class="ib-icon">📲</div>
+  <div class="ib-text">
+    <strong>Install SLIP Generator on this PC</strong>
+    <span>Use it offline, directly from your desktop — no browser needed</span>
+  </div>
+  <div class="ib-actions">
+    <button class="btn-install" onclick="triggerInstall()">Install App</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">Not now</button>
+  </div>
+</div>
+
 <header class="header">
   <div class="hdr-left">
     <div class="hdr-logo">SLP</div>
@@ -168,6 +202,8 @@ tbody tr:hover td{background:#fafbfc}
     </div>
   </div>
   <div class="hdr-right">
+    <div class="installed-badge" id="installedBadge"><span>✓</span> Installed</div>
+    
     <div class="sync-badge sb-none" id="syncBadge" title="Sync status">
       <div class="dot"></div><span id="syncText">Not configured</span>
     </div>
@@ -333,7 +369,22 @@ tbody tr:hover td{background:#fafbfc}
     <div class="mh"><h2>⚙ Settings</h2><button class="mh-close" onclick="closeModal('settingsModal')">✕</button></div>
     <div class="mb">
 
-      <div class="stg-section" style="margin-top:0;padding-top:0;border-top:none">Google Sheets — Auto Sync</div>
+      <div class="stg-section" style="margin-top:0;padding-top:0;border-top:none;color:var(--green)">💻 PC Installation</div>
+      <div class="info-box" style="margin-bottom:12px;border-color:rgba(26,122,74,.3);background:#f0faf5">
+        <strong style="color:var(--green)">Install as a Desktop App (Windows / Mac / Linux)</strong>
+        <ol style="margin-top:8px">
+          <li>Open this file in <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong></li>
+          <li>Look for the <strong>install banner</strong> at the top of the page <em>— or —</em></li>
+          <li>Click the <strong>⊕ Install</strong> icon in the browser address bar (right side)</li>
+          <li>Click <strong>"Install"</strong> in the popup — a shortcut appears on your desktop</li>
+          <li>Launch it anytime from your desktop <strong>without opening a browser</strong></li>
+        </ol>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray2)">
+          <strong>Your data syncs automatically</strong> via Google Sheets. The connection URL is built into the app — <strong>no setup needed on any device.</strong>
+        </div>
+      </div>
+
+      <div class="stg-section">Google Sheets — Auto Sync</div>
 
       <div class="info-box" style="margin-bottom:12px">
         <strong>One-time setup — follow these steps:</strong>
@@ -352,8 +403,9 @@ tbody tr:hover td{background:#fafbfc}
       <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="downloadAppsScript()">⬇ Download Apps Script</button>
 
       <div class="fg">
-        <label>Google Apps Script Web App URL</label>
-        <input type="text" id="gs_url" placeholder="https://script.google.com/macros/s/…/exec">
+        <label>Google Apps Script Web App URL <span style="font-weight:400;text-transform:none;color:var(--green)">✓ Pre-configured</span></label>
+        <input type="text" id="gs_url" value="https://script.google.com/macros/s/AKfycbwfcwhyNo-s0gkeAWtvf48jcHcBNIihlFkNQw7Bp4_FOcSWd8k1gVprOaL83-v9amOf3w/exec" readonly style="background:var(--gray1);color:var(--gray4);font-size:.72rem;cursor:default" class="mono">
+        <div class="hint">This URL is built into the app — no action needed on any device.</div>
       </div>
       <div id="connStatus"></div>
       <div style="display:flex;gap:8px;margin-top:4px">
@@ -388,7 +440,8 @@ const ORIG_NAME   = 'DIV SEC HOROWPOTHANA'; // exactly 20 chars
 const STORE_KEY   = 'slipGenDSH_v2';
 
 /* ── STATE ── */
-let S = { batches:[], activeId:null, selAC:'7042198', gsUrl:'', lastSync:null };
+const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbwfcwhyNo-s0gkeAWtvf48jcHcBNIihlFkNQw7Bp4_FOcSWd8k1gVprOaL83-v9amOf3w/exec';
+let S = { batches:[], activeId:null, selAC:'7042198', gsUrl:DEFAULT_GS_URL, lastSync:null };
 let editId = null;
 let syncTimer = null;
 let syncing = false;
@@ -396,6 +449,7 @@ let syncing = false;
 /* ── PERSISTENCE ── */
 function loadLocal() {
   try { const d=localStorage.getItem(STORE_KEY); if(d) S={...S,...JSON.parse(d)}; } catch(e){}
+  if(!S.gsUrl) S.gsUrl=DEFAULT_GS_URL; // always ensure hardcoded URL is used
 }
 function saveLocal() {
   S.lastUpdated = Date.now();
@@ -889,7 +943,7 @@ function importJSON(e){
 }
 function clearAllData(){
   if(!confirm('Delete ALL local data? This cannot be undone.')) return;
-  S={batches:[],activeId:null,selAC:'7042198',gsUrl:S.gsUrl,lastSync:null};
+  S={batches:[],activeId:null,selAC:'7042198',gsUrl:DEFAULT_GS_URL,lastSync:null};
   saveLocal(); closeModal('settingsModal'); render(); toast('Local data cleared.','err');
 }
 
@@ -901,6 +955,137 @@ document.querySelectorAll('.overlay').forEach(ov=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(ov=>ov.classList.remove('open'));});
 document.getElementById('nb_name').addEventListener('keydown',e=>{if(e.key==='Enter')createBatch();});
+
+
+/* ── PWA: MANIFEST (inline blob) ── */
+(function(){
+  const icons = [];
+  // Generate a simple SVG icon as data URL
+  const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="#0f2744" rx="24"/><rect x="16" y="16" width="160" height="160" fill="#0f2744" rx="16"/><rect x="0" y="140" width="192" height="10" fill="#e8a020"/><text x="50%" y="95" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="64" fill="#e8a020">SLP</text><text x="50%" y="155" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="16" fill="rgba(255,255,255,0.6)">DS HOROWPOTHANA</text></svg>`;
+  const svgBlob = new Blob([svgIcon], {type:'image/svg+xml'});
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  const manifest = {
+    name: "SLIP File Generator — DS Horowpothana",
+    short_name: "SLIP Gen",
+    description: "SLIP File Generator for Divisional Secretariat Horowpothana, Accounts Branch",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#0f2744",
+    theme_color: "#0f2744",
+    orientation: "landscape-primary",
+    icons: [
+      { src: svgUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+      { src: svgUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+    ],
+    categories: ["productivity", "utilities"],
+    lang: "en"
+  };
+
+  const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  const mUrl = URL.createObjectURL(mBlob);
+  document.getElementById('pwaManifest').href = mUrl;
+})();
+
+/* ── PWA: SERVICE WORKER (inline blob) ── */
+(function(){
+  const swCode = `
+const CACHE = 'slipgen-dsh-v1';
+const ASSETS = [self.registration.scope];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  // Only cache same-origin requests; let Google Sheets requests pass through
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin && !url.hostname.endsWith('googleapis.com') &&
+      !url.hostname.endsWith('google.com') && !url.hostname.endsWith('fonts.gstatic.com')) {
+    return;
+  }
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(response => {
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
+    })
+  );
+});
+`;
+  if ('serviceWorker' in navigator) {
+    const swBlob = new Blob([swCode], {type:'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, {scope: './'})
+      .then(reg => {
+        console.log('[PWA] Service Worker registered:', reg.scope);
+      })
+      .catch(err => {
+        console.warn('[PWA] SW registration failed (normal on file://):', err);
+      });
+  }
+})();
+
+/* ── PWA: INSTALL PROMPT ── */
+let _deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  const dismissed = localStorage.getItem('pwaInstallDismissed');
+  if (!dismissed) {
+    document.getElementById('installBanner').style.display = 'flex';
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  _deferredPrompt = null;
+  document.getElementById('installBanner').style.display = 'none';
+  document.getElementById('installedBadge').style.display = 'flex';
+  localStorage.setItem('pwaInstalled', '1');
+  toast('App installed successfully! You can now launch it from your desktop.', 'ok');
+});
+
+function triggerInstall() {
+  if (!_deferredPrompt) {
+    toast('Installation not available. Try refreshing or use Chrome/Edge.', 'err');
+    return;
+  }
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(choice => {
+    if (choice.outcome === 'accepted') {
+      document.getElementById('installBanner').style.display = 'none';
+    }
+    _deferredPrompt = null;
+  });
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem('pwaInstallDismissed', '1');
+}
+
+// Show installed badge if already installed (standalone mode)
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+  document.getElementById('installedBadge').style.display = 'flex';
+  document.getElementById('installBanner').style.display = 'none';
+}
 
 /* ── INIT ── */
 loadLocal();
